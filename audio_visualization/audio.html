@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title></title>
+	<link rel="stylesheet" href="">
+</head>
+<body style="background:#222">
+	<div id="audio" >
+
+	</div>
+	<div id="box" style="width:800px;height:300px;margin:0 auto">
+
+	</div>
+</body>
+<script>
+	function $(id){
+		return document.getElementById(id)
+	}
+	//音乐上下文
+	var ac= new (window.AudioContext||window.webkitAudioContext)()//创建音乐上下文//兼容写法
+	var analyser=ac.createAnalyser();//创建分析节点(用来将解析音频数据)
+	var size=512;
+	analyser.fftsize=size*2;
+	var audio=$('audio')
+	var box=$('box')
+	//canvas部分
+	var canvas=document.createElement('canvas')//创建画布,用来将分析完成的音频数据可视化
+	canvas.height=box.clientHeight;//设置画布高度
+	canvas.width=box.clientWidth;//设置画布宽度
+	box.appendChild(canvas)
+	var ctx=canvas.getContext('2d')
+	var line=ctx.createLinearGradient(0,0,0,box.clientHeight)//可视化柱状图,线性渐变颜色
+	line.addColorStop(0,"red")
+	line.addColorStop(0.5,"yellow")
+	line.addColorStop(1,"green")
+	ctx.fillStyle=line
+	//canvas部分
+	var xmlReq=new XMLHttpRequest();//创建ajax请求
+	xmlReq.open('get','music/Pitbull、Ke$ha - Timber.mp3',true);
+	xmlReq.send(null);
+	xmlReq.responseType='arraybuffer';//将获取到的音频转化为arraybuffer格式
+	xmlReq.onload=function(){
+		var data=xmlReq.response
+		console.log(data)
+		ac.decodeAudioData(data,function(buffer){
+			var bufferSource=ac.createBufferSource();
+			bufferSource.buffer=buffer;
+			bufferSource.loop=true;
+			bufferSource.connect(analyser);
+			analyser.connect(ac.destination);
+			bufferSource.start(0);
+			arrData();
+		},function(err){
+			console.log(err)
+		})
+	}
+	function arrData(){
+		var arr=new Uint8Array(analyser.frequencyBinCount)
+		requestAnimationFrame = window.requestAnimationFrame||
+								window.webketRequestAnimationFrame||
+								window.mozRequestAnimationFrame;
+		function repeat(){
+			analyser.getByteFrequencyData(arr)
+			visualizer(arr)
+			requestAnimationFrame(repeat)
+			// console.log(arr)
+		}
+		requestAnimationFrame(repeat)
+	}
+
+	function visualizer(arr){
+		ctx.clearRect(0,0,box.clientWidth,box.clientHeight)
+		var w=box.clientWidth/size
+		for(var i=0;i<size;i++){
+			var h=arr[i]
+			ctx.fillRect(w*i,box.clientHeight-h,w*0.6,h)
+		}
+	}
+</script>
+</html>
